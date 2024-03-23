@@ -1,6 +1,7 @@
 from tkinter import *
 from tkinter import messagebox
 from random import choice, randint, shuffle, random
+import json
 
 # ---------------------------- PASSWORD GENERATOR ------------------------------- #
 def pw_generator():
@@ -28,8 +29,20 @@ def save():
     website = website_entry.get()
     user = user_entry.get()
     password = password_entry.get()
+
+    try:
+        with open("data.json", "r") as data_file:
+            existing_data = json.load(data_file)
+    except FileNotFoundError:
+        existing_data = {}
+
+    new_data = {website: {
+        "user": user,
+        "password": password,
+    }}
     is_empty = False
     is_ok = False
+
     if len(website) == 0 or len(password) == 0 or len(user) == 0:
         messagebox.showinfo(title="Oops!", message="Fields can not be empty")
         is_empty = True
@@ -38,14 +51,36 @@ def save():
                                        message=f"Credentials entered: \nEmail: {user} \nPassword: {password} \n Want to save it?")
 
     if is_ok and not is_empty:
-        file = open("data.txt", "a")
-        file.write(f"{website} | {user} | {password}\n")
-        file.close()
-        website_entry.delete(0, 'end')
-        user_entry.delete(0, 'end')
-        password_entry.delete(0, 'end')
-        website_entry.focus()
+        existing_data.update(new_data)
 
+        with open("data.json", "w") as data_file:
+            json.dump(existing_data, data_file, indent=4)
+
+            website_entry.delete(0, 'end')
+            user_entry.delete(0, 'end')
+            password_entry.delete(0, 'end')
+            print(f"added {website}")
+            website_entry.focus()
+
+def find_password():
+    search_data = website_entry.get()
+    with open("data.json", "r") as data_file:
+        try:
+            json_data = json.load(data_file)
+            for key, value in json_data.items():
+                if search_data == key:
+                    user = value.get("user")
+                    password = value.get("password")
+                    messagebox.showinfo(title="search", message=f"{key} \n user: {user} \n password: {password}")
+                    return
+            # If loop completes without returning, no match was found
+            messagebox.showinfo(title="error", message="No data found!")
+        except FileNotFoundError:
+            messagebox.showinfo(title="error", message="File not found!")
+        except json.JSONDecodeError:
+            messagebox.showinfo(title="error", message="Invalid JSON format")
+        except Exception as e:
+            messagebox.showinfo(title="error", message=f"An error occurred: {e}")
 
 # ---------------------------- UI SETUP ------------------------------- #
 window = Tk()
@@ -60,9 +95,12 @@ canvas.grid(column=1, row=0)
 website_label = Label(text="Website:")
 website_label.grid(column=0, row=1, sticky="ew")
 
-website_entry = Entry(width=36)
+website_entry = Entry(width=21)
 website_entry.focus()
 website_entry.grid(column=1, row=1, columnspan=2, sticky="ew")
+
+website_button = Button(text="Search", command=find_password)
+website_button.grid(column=2, row=1, sticky="ew")
 
 user_label = Label(text="Email/Username:")
 user_label.grid(column=0, row=2, sticky="ew")
